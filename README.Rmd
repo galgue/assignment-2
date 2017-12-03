@@ -1,0 +1,192 @@
+---
+title: "ass1"
+author: "me"
+date: "November 20, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+##pull the train out
+
+```{r}
+df_train<-read.csv(unz("./Titanic.zip","Titanic/train.csv"),sep=",")
+```
+
+
+#Preprocessing
+
+##take out the title from the name (mr./miss./Dr.) and make it a field and make it a factor
+
+```{r}
+df_train$Name<-as.factor(sapply(df_train$Name,function(x) substr(x,gregexpr(pattern =',',x)[[1]][1]+2,gregexpr(pattern ='\\.',x)[[1]][1]+1)))
+```
+
+##makr survive a factor
+
+```{r}
+df_train$Survived<-as.factor(df_train$Survived)
+```
+
+##turn the nulls in "Embarked" into the string "missing"
+
+```{r}
+levels(df_train$Embarked)[1]="missing"
+
+for(i in 1:length(df_train$Age)){
+  if(is.na(df_train$Age[i]))
+    df_train$Age[i] <- mean(df_train$Age, na.rm = TRUE)
+}
+```
+
+##delete the passengerID, the Cabin and the Ticket
+### we deleted the cabin after we ran ImpVar
+
+```{r}
+df_train<-subset(df_train,select = -c(PassengerId,Cabin,Ticket))
+```
+
+
+#algorithms
+
+##c50
+
+###pull the libraries
+```{r}
+#install.packages("caret")
+library(caret)
+#install.packages("C50")
+library(C50)
+
+#install.packages("e1071")
+library(e1071)
+```
+
+###set seed
+```{r}
+set.seed(123)
+```
+
+###create control the uses cross validation with k=10
+```{r}
+control <- trainControl(method="cv", number=10)
+```
+
+##tuning
+
+###we tune the winnow and the model
+```{r}
+grid <- expand.grid(.winnow = c(TRUE,FALSE),.trials=30, .model=c('tree','rules'))
+fit.c50 <- train(Survived~., data=df_train, method="C5.0", metric="Accuracy", trControl=control,tuneGrid =grid,na.action=na.pass)
+```
+
+### plot
+
+```{r}
+plot(fit.c50)
+```
+
+
+
+##xgb
+
+###set seed
+```{r}
+set.seed(123)
+```
+
+###create control the uses cross validation with k=10
+```{r}
+control <- trainControl(method="cv", number=10)
+```
+
+##tuning
+
+###we tune the winnow and the model
+```{r}
+grid <- expand.grid(.nrounds=10,.max_depth=6,.eta=c(0.1,0.2,0.3),.gamma=0.1,.colsample_bytree=c(0.5,0.6,0.7),.min_child_weight=0.1,.subsample=0.75)
+fit.xgb <- train(Survived~., data=df_train, method="xgbTree",  trControl=control, verbose=FALSE,tuneGrid =grid,na.action=na.pass)
+```
+
+### plot
+
+```{r}
+plot(fit.xgb)
+```
+
+
+
+##random forest
+
+###set seed
+```{r}
+set.seed(123)
+```
+
+###create control the uses cross validation with k=10
+```{r}
+tc <- trainControl(method="cv", number=3)
+```
+
+##tuning
+
+###we tune the winnow and the model
+```{r}
+Grid <- expand.grid(.mtry = c(4:16))
+fit.rf <- train(Survived~., data=df_train , method='rf', trControl=tc,tuneGrid=Grid,metric='Accuracy',na.action = na.pass)
+```
+
+### plot
+
+```{r}
+plot(fit.rf)
+```
+
+
+#print the result of the test into a file for the web
+
+
+```{r}
+
+df_test<-read.csv(unz("./Titanic.zip","Titanic/test.csv"),sep=",")
+
+pid<-df_test$PassengerId
+
+df_test$Name<-as.factor(sapply(df_test$Name,function(x) substr(x,gregexpr(pattern =',',x)[[1]][1]+2,gregexpr(pattern ='\\.',x)[[1]][1]+1)))
+
+
+levels(df_test$Cabin)[1]="missing"
+levels(df_test$Embarked)[1]="missing"
+
+for(i in 1:length(df_test$Age)){
+  if(is.na(df_test$Age[i]))
+    df_test$Age[i] <- mean(df_test$Age, na.rm = TRUE)
+}
+
+
+for(i in 1:length(df_test$Fare)){
+  if(is.na(df_test$Fare[i]))
+    df_test$Fare[i] <- mean(df_test$Fare, na.rm = TRUE)
+}
+
+df_test<-subset(df_test,select = -c(PassengerId,Cabin,Ticket))
+
+fit.rf$xlevels[["Cabin"]]<-union(fit.rf$xlevels[["Cabin"]],levels(df_test$Cabin))
+fit.rf$xlevels[["Name"]]<-union(fit.rf$xlevels[["Name"]],levels(df_test$Name))
+
+
+res<-predict(fit.rf,df_test,na.action=na.pass)
+
+PassengerId<-pid
+Survived<-res
+titanic.data <- data.frame(PassengerId,Survived)
+write.csv(titanic.data,file = "res.csv",row.names=FALSE)
+
+```
+
+
+
