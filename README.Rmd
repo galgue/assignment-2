@@ -91,6 +91,13 @@ plot(fit.c50)
 ```
 
 
+[link to test results](/results/resC50.csv)
+
+### rank
+
+![](/images/1.PNG)
+
+
 
 ## xgb
 
@@ -118,6 +125,11 @@ fit.xgb <- train(Survived~., data=df_train, method="xgbTree",  trControl=control
 plot(fit.xgb)
 ```
 
+[link to test results](/results/resXGB.csv)
+
+### rank
+
+![](/images/2.PNG)
 
 
 ## random forest
@@ -146,6 +158,11 @@ fit.rf <- train(Survived~., data=df_train , method='rf', trControl=tc,tuneGrid=G
 plot(fit.rf)
 ```
 
+[link to test results](/results/resRF.csv)
+
+### rank
+
+![](/images/3.PNG)
 
 # print the result of the test into a file for the web
 
