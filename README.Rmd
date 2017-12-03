@@ -5,6 +5,10 @@ date: "November 20, 2017"
 output: html_document
 ---
 
+# user:
+https://www.kaggle.com/galgue11
+
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
